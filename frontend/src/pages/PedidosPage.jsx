@@ -14,6 +14,7 @@ export function PedidosPage() {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
 
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [cantidad, setCantidad] = useState(1);
@@ -57,6 +58,7 @@ export function PedidosPage() {
 
   const crearPedido = async () => {
     setError('');
+    setMensajeExito('');
     if (itemsNuevoPedido.length === 0) {
       setError('Agrega al menos un producto al pedido.');
       return;
@@ -64,6 +66,9 @@ export function PedidosPage() {
     try {
       await pedidoService.crear({ usuarioId: usuario.id, items: itemsNuevoPedido });
       setItemsNuevoPedido([]);
+      setMensajeExito(
+        'Pedido registrado como "Pendiente de pago". Te enviamos un correo con el desglose de tu compra y las instrucciones de pago.'
+      );
       cargarTodo();
     } catch (err) {
       setError(err.message);
@@ -99,6 +104,7 @@ export function PedidosPage() {
         </div>
 
         {error && <div className="mensaje-error">{error}</div>}
+        {mensajeExito && <div className="mensaje-exito">{mensajeExito}</div>}
 
         {!esAdmin && (
           <p className="vacio" style={{ padding: '0 0 20px' }}>

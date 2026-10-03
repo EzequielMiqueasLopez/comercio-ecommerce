@@ -13,6 +13,7 @@ const PgProductoRepository = require('../adapters/persistence/PgProductoReposito
 const PgPedidoRepository = require('../adapters/persistence/PgPedidoRepository');
 const BcryptPasswordHasher = require('../adapters/security/BcryptPasswordHasher');
 const JwtService = require('../adapters/security/JwtService');
+const NodemailerEmailAdapter = require('../adapters/email/NodemailerEmailAdapter');
 
 // Casos de uso: Usuario
 const CrearUsuarioUseCase = require('../../application/usecases/usuario/CrearUsuarioUseCase');
@@ -48,6 +49,7 @@ const productoRepository = new PgProductoRepository(pool);
 const pedidoRepository = new PgPedidoRepository(pool);
 const passwordHasher = new BcryptPasswordHasher(env.bcryptSaltRounds);
 const jwtService = new JwtService(env.jwt.secret, env.jwt.expiresIn);
+const emailService = new NodemailerEmailAdapter(env.email);
 
 // --- Instanciación de casos de uso, con sus dependencias inyectadas ---
 const usuarioController = new UsuarioController({
@@ -69,7 +71,7 @@ const productoController = new ProductoController({
 });
 
 const pedidoController = new PedidoController({
-  crearPedido: new CrearPedidoUseCase(pedidoRepository, productoRepository, usuarioRepository),
+  crearPedido: new CrearPedidoUseCase(pedidoRepository, productoRepository, usuarioRepository, emailService),
   listarPedidos: new ListarPedidosUseCase(pedidoRepository),
   obtenerPedido: new ObtenerPedidoUseCase(pedidoRepository),
   actualizarEstadoPedido: new ActualizarEstadoPedidoUseCase(pedidoRepository),

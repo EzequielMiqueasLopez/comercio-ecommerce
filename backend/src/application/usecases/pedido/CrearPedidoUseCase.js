@@ -11,10 +11,11 @@ const { calcularTotalPedido } = require('../../../domain/services/PedidoCalculat
  *   4. Persiste el pedido y descuenta el stock.
  */
 class CrearPedidoUseCase {
-  constructor(pedidoRepository, productoRepository, usuarioRepository) {
+  constructor(pedidoRepository, productoRepository, usuarioRepository, emailService) {
     this.pedidoRepository = pedidoRepository;
     this.productoRepository = productoRepository;
     this.usuarioRepository = usuarioRepository;
+    this.emailService = emailService; // puerto de salida, opcional
   }
 
   async ejecutar({ usuarioId, items }) {
@@ -49,7 +50,36 @@ class CrearPedidoUseCase {
     });
 
     // El repositorio se encarga de la transacción: crear pedido + detalle + descontar stock
-    return this.pedidoRepository.crear(pedido, total);
+    const pedidoCreado = await this.pedidoRepository.crear(pedido, total);
+
+    // Notificaciones por correo (puerto de salida). Regla de negocio importante:
+    // si el correo falla, el pedido YA quedó registrado y NO debe revertirse ni
+    // fallar la petición del cliente por eso. Solo se registra el error.
+    if (this.emailService) {
+      const itemsConNombre = itemsConPrecio.map((it) => ({
+        ...it,
+        nombre: productos.find((p) => p.id === it.productoId)?.nombre || 'Producto'
+      }));
+
+      try {
+        await this.emailService.enviarConfirmacionPedido({
+          usuario,
+          pedido: pedidoCreado,
+          items: itemsConNombre,
+          total
+        });
+        await this.emailService.enviarNotificacionAdmin({
+          usuario,
+          pedido: pedidoCreado,
+          items: itemsConNombre,
+          total
+        });
+      } catch (error) {
+        console.error('No se pudieron enviar las notificaciones por correo:', error.message);
+      }
+    }
+
+    return pedidoCreado;
   }
 }
 
